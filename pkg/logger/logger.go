@@ -21,17 +21,14 @@ func New(cfg Config, out io.Writer) *slog.Logger {
 }
 
 func handler(env string, out io.Writer, opts *slog.HandlerOptions) slog.Handler {
-	var h slog.Handler
 	switch env {
 	case EnvProd, EnvDev:
-		h = slog.NewJSONHandler(out, opts)
+		return slog.NewJSONHandler(out, opts)
 	case EnvLocal:
-		h = slog.NewTextHandler(out, opts)
+		return slog.NewTextHandler(out, opts)
 	default:
-		h = slog.NewTextHandler(out, opts)
+		return slog.NewTextHandler(out, opts)
 	}
-
-	return h
 }
 
 func handlerOptions(level string) *slog.HandlerOptions {
