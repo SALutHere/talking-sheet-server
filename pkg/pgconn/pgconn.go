@@ -10,6 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	pgDSNScheme = "postgres"
+
+	pgDSNParamKeySchema  = "search_path"
+	pgDSNParamKeySSLMode = "sslmode"
+)
+
 var pingTimeout = 5 * time.Second
 
 func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
@@ -41,15 +48,15 @@ func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 
 func pgDSN(cfg Config) string {
 	u := &url.URL{
-		Scheme: "postgres",
+		Scheme: pgDSNScheme,
 		User:   url.UserPassword(cfg.User, cfg.Password),
 		Host:   fmt.Sprintf("%s:%s", cfg.Host, strconv.Itoa(cfg.Port)),
 		Path:   fmt.Sprintf("/%s", cfg.Name),
 	}
 
 	q := u.Query()
-	q.Set("schema", cfg.Schema)
-	q.Set("sslmode", cfg.SSLMode)
+	q.Set(pgDSNParamKeySchema, cfg.Schema)
+	q.Set(pgDSNParamKeySSLMode, cfg.SSLMode)
 	u.RawQuery = q.Encode()
 
 	return u.String()
