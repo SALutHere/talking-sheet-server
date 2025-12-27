@@ -1,4 +1,4 @@
-package log
+package logger
 
 import (
 	"context"
@@ -15,5 +15,8 @@ func From(ctx context.Context, fallback *slog.Logger) *slog.Logger {
 	if l, ok := ctx.Value(ctxKey{}).(*slog.Logger); ok {
 		return l
 	}
-	return fallback
+	if fallback != nil {
+		return fallback
+	}
+	return slog.Default()
 }
