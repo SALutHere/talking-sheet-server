@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var pingTimeout time.Duration = 5 * time.Second
+var pingTimeout = 5 * time.Second
 
 func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 	poolCfg, err := pgxpool.ParseConfig(pgDSN(cfg))
