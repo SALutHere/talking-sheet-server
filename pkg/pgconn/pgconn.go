@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strconv"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -17,12 +15,14 @@ const (
 	pgDSNParamKeySSLMode = "sslmode"
 )
 
-var pingTimeout = 5 * time.Second
-
 func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	poolCfg, err := pgxpool.ParseConfig(pgDSN(cfg))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("pgconn: parse config: %w", err)
 	}
 
 	poolCfg.MinConns = cfg.MinConns
@@ -32,15 +32,15 @@ func New(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("pgconn: create pool: %w", err)
 	}
 
-	pingCtx, cancel := context.WithTimeout(ctx, pingTimeout)
+	pingCtx, cancel := context.WithTimeout(ctx, cfg.PingTimeout)
 	defer cancel()
 
 	if err := pool.Ping(pingCtx); err != nil {
 		pool.Close()
-		return nil, err
+		return nil, fmt.Errorf("pgconn: ping: %w", err)
 	}
 
 	return pool, nil
@@ -50,13 +50,17 @@ func pgDSN(cfg Config) string {
 	u := &url.URL{
 		Scheme: pgDSNScheme,
 		User:   url.UserPassword(cfg.User, cfg.Password),
-		Host:   fmt.Sprintf("%s:%s", cfg.Host, strconv.Itoa(cfg.Port)),
+		Host:   fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Path:   fmt.Sprintf("/%s", cfg.Name),
 	}
 
 	q := u.Query()
-	q.Set(pgDSNParamKeySchema, cfg.Schema)
-	q.Set(pgDSNParamKeySSLMode, cfg.SSLMode)
+	if cfg.Schema != "" {
+		q.Set(pgDSNParamKeySchema, cfg.Schema)
+	}
+	if cfg.SSLMode != "" {
+		q.Set(pgDSNParamKeySSLMode, cfg.SSLMode)
+	}
 	u.RawQuery = q.Encode()
 
 	return u.String()
